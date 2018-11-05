@@ -1,7 +1,7 @@
-// Copyright 2016 ETH Zurich and University of Bologna.
+// Copyright 2017 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the “License”); you may not use this file except in
-// compliance with the License. You may obtain a copy of the License at
+// compliance with the License.  You may obtain a copy of the License at
 // http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
 // or agreed to in writing, software, hardware and materials distributed under
 // this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
@@ -77,7 +77,7 @@
 
 
 // ISRS
-#define GPIO_EVENT              0x19
+#define GPIO_EVENT              25
 #define TIMER_A_OVERFLOW        0x1C
 #define TIMER_A_OUTPUT_CMP      0x1D
 #define TIMER_B_OVERFLOW        0x1E

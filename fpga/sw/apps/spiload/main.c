@@ -1,3 +1,12 @@
+// Copyright 2017 ETH Zurich and University of Bologna.
+// Copyright and related rights are licensed under the Solderpad Hardware
+// License, Version 0.51 (the “License”); you may not use this file except in
+// compliance with the License.  You may obtain a copy of the License at
+// http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
+// or agreed to in writing, software, hardware and materials distributed under
+// this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
 
 #include <byteswap.h>
 #include <stdio.h>
@@ -59,8 +68,8 @@ int pulp_ctrl(int fetch_en, int reset) {
   }
 
   gpio_base = ctrl_map + (PULP_CTRL_AXI_ADDR & MAP_MASK);
-  volatile uint32_t* gpio2 = (volatile uint32_t*)(gpio_base + 0x8);
-  volatile uint32_t* dir2  = (volatile uint32_t*)(gpio_base + 0xC);
+  volatile uint32_t* gpio = (volatile uint32_t*)(gpio_base + 0x0);
+  volatile uint32_t* dir  = (volatile uint32_t*)(gpio_base + 0x4);
 
   // now we can actually write to the peripheral
   uint32_t val = 0x0;
@@ -70,8 +79,8 @@ int pulp_ctrl(int fetch_en, int reset) {
   if (fetch_en)
     val |= (1 << 0);
 
-  *dir2  = 0x0; // configure as output
-  *gpio2 = val;
+  *dir  = 0x0; // configure as output
+  *gpio = val;
 
 fail:
   close(mem_fd);
@@ -193,7 +202,7 @@ int spi_read_reg(unsigned int addr) {
   }
 
 
-  // check if write was sucessful
+  // check if write was successful
   if (ioctl(fd, SPI_IOC_MESSAGE(1), &transfer) < 0) {
     perror("SPI_IOC_MESSAGE");
     retval = -1;
@@ -311,7 +320,7 @@ int spi_load(uint32_t addr, char* in_buf, size_t in_size) {
   // prepare for readback
   rd_buf = (char*)malloc(transfer_len);
   if (rd_buf == NULL) {
-    printf("Unable to acquire buffer to check if write was sucessful\n");
+    printf("Unable to acquire buffer to check if write was successful\n");
 
     retval = -1;
     goto fail;
@@ -340,7 +349,7 @@ int spi_load(uint32_t addr, char* in_buf, size_t in_size) {
   wr_buf[3] = addr >> 8;
   wr_buf[4] = addr;
 
-  // check if write was sucessful
+  // check if write was successful
   if (ioctl(fd, SPI_IOC_MESSAGE(1), &transfer) < 0) {
     perror("SPI_IOC_MESSAGE");
     retval = -1;
@@ -354,7 +363,7 @@ int spi_load(uint32_t addr, char* in_buf, size_t in_size) {
 
   for(i = 0; i < in_size; i++) {
     if (in_buf[i] != rd_buf[i + 9]) {
-      printf("Read check failed at idx %d: Expected %02X, got %02X\n", i, in_buf[i], rd_buf[i + 13]);
+      printf("Read check failed at idx %d: Expected %02X, got %02X\n", i, in_buf[i], rd_buf[i + 9]);
     }
   }
 
@@ -428,6 +437,7 @@ int main(int argc, char **argv)
 
   if (arguments.timeout > 0) {
     console_thread_start();
+    sleep(1);
   }
 
   printf("Starting device\n");
@@ -485,7 +495,7 @@ int process_file(char* buffer, size_t size) {
 
     // convert data
     data[entries] = __bswap_32(data[entries]);
-    //printf("Line %s, addr %08X, data %08X\n", line, addr[entries], data[entries]);
+    //    printf("Line %s, addr %08X, data %08X\n", line, addr[entries], data[entries]);
 
     entries++;
 
@@ -505,7 +515,7 @@ int process_file(char* buffer, size_t size) {
   for(i = 1; i < entries; i++) {
     if(addr[i] != (addr[i-1] + 0x4) || (i - start_idx) == 255 || i == (entries - 1)) {
       // send block
-      // printf("Sending block addr %08X with %d entries\n", addr[start_idx], i - start_idx + 1);
+      printf("Sending block addr %08X with %d entries\n", addr[start_idx], i - start_idx + 1);
       spi_load(addr[start_idx], (char*)&data[start_idx], (i - start_idx + 1) * 4);
       start_idx = i;
     }
@@ -549,9 +559,9 @@ int clock_manager() {
   volatile uint32_t* ccr0  = (volatile uint32_t*)(clk_base + 0x200);
   volatile uint32_t* ccr2  = (volatile uint32_t*)(clk_base + 0x208);
 
-  // printf("SR   is %08X\n", *sr);
-  // printf("CCR0 is %08X\n", *ccr0);
-  // printf("CCR2 is %08X\n", *ccr2);
+  /* printf("SR   is %08X\n", *sr); */
+  /* printf("CCR0 is %08X\n", *ccr0); */
+  /* printf("CCR2 is %08X\n", *ccr2); */
 
   // set to 5 MHz
   *ccr0 = 0x04004005;

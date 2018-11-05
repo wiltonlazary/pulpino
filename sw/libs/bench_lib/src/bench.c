@@ -1,13 +1,12 @@
-// Copyright 2016 ETH Zurich and University of Bologna.
+// Copyright 2017 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the “License”); you may not use this file except in
-// compliance with the License. You may obtain a copy of the License at
+// compliance with the License.  You may obtain a copy of the License at
 // http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
 // or agreed to in writing, software, hardware and materials distributed under
 // this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
-
 #include "bench.h"
 #include "uart.h"
 #include "gpio.h"
@@ -50,10 +49,8 @@ void print_summary(unsigned int errors)
 
   if (errors == 0) {
     printf("SUCCESS\n");
-    printf("OOOOOOK!!!!!!\n"); // TODO: remove this one
   } else {
     printf("FAIL\n");
-    printf("NOT OK!!!!!\n");   // TODO: remove this one
   }
 }
 
@@ -114,7 +111,8 @@ void perf_print_all(void) {
   printf("Perf #ST:      %d\n", cpu_perf_get(6));
   printf("Perf #JUMP:    %d\n", cpu_perf_get(7));
   printf("Perf #BRANCH:  %d\n", cpu_perf_get(8));
-//  printf("Perf #TAKEN:   %d\n", cpu_perf_get(9));
+  printf("Perf #TAKEN:   %d\n", cpu_perf_get(9));
+  printf("Perf #RVC:     %d\n", cpu_perf_get(10));
 #else
   printf("Perf CYCLES: %d\n",      cpu_perf_get(SPR_PCER_CYCLES));
   printf("Perf INSTR: %d\n",       cpu_perf_get(SPR_PCER_INSTR));
@@ -144,5 +142,5 @@ void illegal_insn_handler_c(void)
 #endif
   insn = *((unsigned int*)(exception_address));
   printf("Illegal instruction encountered at address 0x%08X: %X\n", exception_address, insn);
-  eoc(0);
+  exit(1);
 }

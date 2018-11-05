@@ -1,1 +1,5 @@
-add_application(motion_detection motion_detection.c)
+if (${GCC_MARCH} MATCHES "[pulp]+")
+        add_application(motion_detection motion_detection.c FLAGS "-DDOTP" LABELS "sequential_tests")
+else()
+        add_application(motion_detection motion_detection.c FLAGS LABELS "sequential_tests")
+endif()

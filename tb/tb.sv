@@ -1,3 +1,13 @@
+// Copyright 2017 ETH Zurich and University of Bologna.
+// Copyright and related rights are licensed under the Solderpad Hardware
+// License, Version 0.51 (the “License”); you may not use this file except in
+// compliance with the License.  You may obtain a copy of the License at
+// http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
+// or agreed to in writing, software, hardware and materials distributed under
+// this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
 `include "config.sv"
 `include "tb_jtag_pkg.sv"
 
@@ -13,12 +23,16 @@ module tb;
   timeprecision 1ps;
 
   // +MEMLOAD= valid values are "SPI", "STANDALONE" "PRELOAD", "" (no load of L2)
-  parameter  SPI           = "QUAD";    // valid values are "SINGLE", "QUAD"
-  parameter  ENABLE_VPI    = 0;
-  parameter  BAUDRATE      = 781250; // 1562500
-  parameter  CLK_USE_FLL   = 0;  // 0 or 1
+  parameter  SPI            = "QUAD";    // valid values are "SINGLE", "QUAD"
+  parameter  BAUDRATE       = 781250;    // 1562500
+  parameter  CLK_USE_FLL    = 0;  // 0 or 1
+  parameter  TEST           = ""; //valid values are "" (NONE), "DEBUG"
+  parameter  USE_ZERO_RISCY = 0;
+  parameter  RISCY_RV32F    = 0;
+  parameter  ZERO_RV32M     = 1;
+  parameter  ZERO_RV32E     = 0;
 
-  int           exit_status = `EXIT_ERROR; // modelsim exit code, will be overwritten when successfull
+  int           exit_status = `EXIT_ERROR; // modelsim exit code, will be overwritten when successful
 
   string        memload;
   logic         s_clk   = 1'b0;
@@ -44,6 +58,19 @@ module tb;
   logic         s_uart_dtr;
   logic         s_uart_rts;
 
+  logic         scl_pad_i;
+  logic         scl_pad_o;
+  logic         scl_padoen_o;
+
+  logic         sda_pad_i;
+  logic         sda_pad_o;
+  logic         sda_padoen_o;
+
+  tri1          scl_io;
+  tri1          sda_io;
+
+  logic [31:0]  gpio_in = '0;
+  logic [31:0]  gpio_dir;
   logic [31:0]  gpio_out;
 
   logic [31:0]  recv_data;
@@ -52,42 +79,54 @@ module tb;
 
   adv_dbg_if_t adv_dbg_if = new(jtag_if);
 
-  generate if(ENABLE_VPI == 1)
-  begin
-    // jtag dpi module
-    jtag_dpi
-    #(
-      .TIMEOUT_COUNT ( 6'd10 )
-    )
-    i_jtag
-    (
-      .clk_i    ( s_clk   ),
-      .enable_i ( s_rst_n ),
-
-      .tms_o    ( jtag_if.tms     ),
-      .tck_o    ( jtag_if.tck     ),
-      .trst_o   ( jtag_if.trstn   ),
-      .tdi_o    ( jtag_if.tdi     ),
-      .tdo_i    ( jtag_if.tdo     )
-     );
-  end
-  endgenerate
-
   // use 8N1
-  uart_tb_rx
+  uart_bus
   #(
     .BAUD_RATE(BAUDRATE),
     .PARITY_EN(0)
   )
-  uart_tb_rx_i
+  uart
   (
-    .rx(uart_rx),
-    .rx_en(1'b1),
-    .word_done()
+    .rx         ( uart_rx ),
+    .tx         ( uart_tx ),
+    .rx_en      ( 1'b1    )
   );
 
+  spi_slave
+  spi_master();
 
-  pulpino_top top_i
+
+  i2c_buf i2c_buf_i
+  (
+    .scl_io       ( scl_io       ),
+    .sda_io       ( sda_io       ),
+    .scl_pad_i    ( scl_pad_i    ),
+    .scl_pad_o    ( scl_pad_o    ),
+    .scl_padoen_o ( scl_padoen_o ),
+    .sda_pad_i    ( sda_pad_i    ),
+    .sda_pad_o    ( sda_pad_o    ),
+    .sda_padoen_o ( sda_padoen_o )
+  );
+
+  i2c_eeprom_model
+  #(
+    .ADDRESS ( 7'b1010_000 )
+  )
+  i2c_eeprom_model_i
+  (
+    .scl_io ( scl_io  ),
+    .sda_io ( sda_io  ),
+    .rst_ni ( s_rst_n )
+  );
+
+  pulpino_top
+  #(
+    .USE_ZERO_RISCY    ( USE_ZERO_RISCY ),
+    .RISCY_RV32F       ( RISCY_RV32F    ),
+    .ZERO_RV32M        ( ZERO_RV32M     ),
+    .ZERO_RV32E        ( ZERO_RV32E     )
+   )
+  top_i
   (
     .clk               ( s_clk        ),
     .rst_n             ( s_rst_n      ),
@@ -108,39 +147,39 @@ module tb;
     .spi_sdi2_i        ( spi_sdo2     ),
     .spi_sdi3_i        ( spi_sdo3     ),
 
-    .spi_master_clk_o  (              ),
-    .spi_master_csn0_o (              ),
-    .spi_master_csn1_o (              ),
-    .spi_master_csn2_o (              ),
-    .spi_master_csn3_o (              ),
-    .spi_master_mode_o (              ),
-    .spi_master_sdo0_o (              ),
-    .spi_master_sdo1_o (              ),
-    .spi_master_sdo2_o (              ),
-    .spi_master_sdo3_o (              ),
-    .spi_master_sdi0_i (              ),
-    .spi_master_sdi1_i (              ),
-    .spi_master_sdi2_i (              ),
-    .spi_master_sdi3_i (              ),
+    .spi_master_clk_o  ( spi_master.clk     ),
+    .spi_master_csn0_o ( spi_master.csn     ),
+    .spi_master_csn1_o (                    ),
+    .spi_master_csn2_o (                    ),
+    .spi_master_csn3_o (                    ),
+    .spi_master_mode_o ( spi_master.padmode ),
+    .spi_master_sdo0_o ( spi_master.sdo[0]  ),
+    .spi_master_sdo1_o ( spi_master.sdo[1]  ),
+    .spi_master_sdo2_o ( spi_master.sdo[2]  ),
+    .spi_master_sdo3_o ( spi_master.sdo[3]  ),
+    .spi_master_sdi0_i ( spi_master.sdi[0]  ),
+    .spi_master_sdi1_i ( spi_master.sdi[1]  ),
+    .spi_master_sdi2_i ( spi_master.sdi[2]  ),
+    .spi_master_sdi3_i ( spi_master.sdi[3]  ),
 
-    .scl_pad_i         (              ),
-    .scl_pad_o         (              ),
-    .scl_padoen_o      (              ),
-    .sda_pad_i         (              ),
-    .sda_pad_o         (              ),
-    .sda_padoen_o      (              ),
+    .scl_pad_i         ( scl_pad_i    ),
+    .scl_pad_o         ( scl_pad_o    ),
+    .scl_padoen_o      ( scl_padoen_o ),
+    .sda_pad_i         ( sda_pad_i    ),
+    .sda_pad_o         ( sda_pad_o    ),
+    .sda_padoen_o      ( sda_padoen_o ),
 
 
     .uart_tx           ( uart_rx      ),
-    .uart_rx           ( uart_rx      ),
+    .uart_rx           ( uart_tx      ),
     .uart_rts          ( s_uart_rts   ),
     .uart_dtr          ( s_uart_dtr   ),
     .uart_cts          ( 1'b0         ),
     .uart_dsr          ( 1'b0         ),
 
-    .gpio_in           (              ),
+    .gpio_in           ( gpio_in      ),
     .gpio_out          ( gpio_out     ),
-    .gpio_dir          (              ),
+    .gpio_dir          ( gpio_dir     ),
     .gpio_padcfg       (              ),
 
     .tck_i             ( jtag_if.tck     ),
@@ -172,11 +211,14 @@ module tb;
 
   initial
   begin
+    int i;
 
     if(!$value$plusargs("MEMLOAD=%s", memload))
       memload = "PRELOAD";
 
     $display("Using MEMLOAD method: %s", memload);
+
+    $display("Using %s core", USE_ZERO_RISCY ? "zero-riscy" : "ri5cy");
 
     use_qspi = SPI == "QUAD" ? 1'b1 : 1'b0;
 
@@ -188,6 +230,9 @@ module tb;
     s_rst_n = 1'b1;
 
     #500ns;
+    if (use_qspi)
+      spi_enable_qpi();
+
 
     if (memload != "STANDALONE")
     begin
@@ -205,9 +250,6 @@ module tb;
     end
     else if (memload == "SPI")
     begin
-      if (use_qspi)
-        spi_enable_qpi();
-
       spi_load(use_qspi);
       spi_check(use_qspi);
     end
@@ -215,8 +257,121 @@ module tb;
     #200ns;
     fetch_enable = 1'b1;
 
+    if(TEST == "DEBUG") begin
+      debug_tests();
+    end else if (TEST == "DEBUG_IRQ") begin
+      debug_irq_tests();
+    end else if (TEST == "MEM_DPI") begin
+      mem_dpi(4567);
+    end else if (TEST == "ARDUINO_UART") begin
+      if (~gpio_out[0])
+        wait(gpio_out[0]);
+      uart.send_char(8'h65);
+    end else if (TEST == "ARDUINO_GPIO") begin
+      // Here  test for GPIO Starts
+      if (~gpio_out[0])
+        wait(gpio_out[0]);
+
+      gpio_in[4]=1'b1;
+
+      if (~gpio_out[1])
+        wait(gpio_out[1]);
+      if (~gpio_out[2])
+        wait(gpio_out[2]);
+      if (~gpio_out[3])
+        wait(gpio_out[3]);
+
+      gpio_in[7]=1'b1;
+
+    end else if (TEST == "ARDUINO_SHIFT") begin
+
+      if (~gpio_out[0])
+        wait(gpio_out[0]);
+      //start TEST
+
+      if (~gpio_out[4])
+        wait(gpio_out[4]);
+      gpio_in[3]=1'b1;
+      if (gpio_out[4])
+        wait(~gpio_out[4]);
+
+      if (~gpio_out[4])
+        wait(gpio_out[4]);
+      gpio_in[3]=1'b1;
+      if (gpio_out[4])
+        wait(~gpio_out[4]);
+
+      if (~gpio_out[4])
+        wait(gpio_out[4]);
+      gpio_in[3]=1'b0;
+      if (gpio_out[4])
+        wait(~gpio_out[4]);
+
+      if (~gpio_out[4])
+        wait(gpio_out[4]);
+      gpio_in[3]=1'b0;
+      if (gpio_out[4])
+        wait(~gpio_out[4]);
+
+      if (~gpio_out[4])
+        wait(gpio_out[4]);
+      gpio_in[3]=1'b1;
+      if (gpio_out[4])
+        wait(~gpio_out[4]);
+
+      if (~gpio_out[4])
+        wait(gpio_out[4]);
+      gpio_in[3]=1'b0;
+      if (gpio_out[4])
+        wait(~gpio_out[4]);
+
+      if (~gpio_out[4])
+        wait(gpio_out[4]);
+      gpio_in[3]=1'b0;
+      if (gpio_out[4])
+        wait(~gpio_out[4]);
+
+      if (~gpio_out[4])
+        wait(gpio_out[4]);
+      gpio_in[3]=1'b1;
+      if (gpio_out[4])
+        wait(~gpio_out[4]);
+
+    end else if (TEST == "ARDUINO_PULSEIN") begin
+      if (~gpio_out[0])
+        wait(gpio_out[0]);
+      #50us;
+      gpio_in[4]=1'b1;
+      #500us;
+      gpio_in[4]=1'b0;
+      #1ms;
+      gpio_in[4]=1'b1;
+      #500us;
+      gpio_in[4]=1'b0;
+    end else if (TEST == "ARDUINO_INT") begin
+      if (~gpio_out[0])
+        wait(gpio_out[0]);
+      #50us;
+      gpio_in[1]=1'b1;
+      #20us;
+      gpio_in[1]=1'b0;
+      #20us;
+      gpio_in[1]=1'b1;
+      #20us;
+      gpio_in[2]=1'b1;
+      #20us;
+    end else if (TEST == "ARDUINO_SPI") begin
+      for(i = 0; i < 2; i++) begin
+        spi_master.wait_csn(1'b0);
+        spi_master.send(0, {>>{8'h38}});
+      end
+    end
+
+
+
     // end of computation
-    wait(top_i.gpio_out[8]);
+    if (~gpio_out[8])
+      wait(gpio_out[8]);
 
     spi_check_return_codes(exit_status);
 
@@ -227,5 +382,7 @@ module tb;
   // TODO: this is a hack, do it properly!
   `include "tb_spi_pkg.sv"
   `include "tb_mem_pkg.sv"
+  `include "spi_debug_test.svh"
+  `include "mem_dpi.svh"
 
 endmodule

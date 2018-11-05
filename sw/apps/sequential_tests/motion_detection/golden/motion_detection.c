@@ -1,3 +1,13 @@
+// Copyright 2017 ETH Zurich and University of Bologna.
+// Copyright and related rights are licensed under the Solderpad Hardware
+// License, Version 0.51 (the “License”); you may not use this file except in
+// compliance with the License.  You may obtain a copy of the License at
+// http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
+// or agreed to in writing, software, hardware and materials distributed under
+// this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
 #include <stdio.h>
 
 #define pixel short int
@@ -5,9 +15,9 @@
 #include "background_80_60.h"
 #include "test_omino_80_60.h"
 
-#define PICTURE_HORIZONTAL_SIZE 5
-#define PICTURE_VERTICAL_SIZE 5
-#define PICTURE_HORIZONTAL_OFFSET 20
+#define PICTURE_HORIZONTAL_SIZE 10
+#define PICTURE_VERTICAL_SIZE 10
+#define PICTURE_HORIZONTAL_OFFSET 15
 #define KERNEL_SIZE 3
 
 pixel sobel1[9] = {1,2,1,0,0,0,-1,-2,-1};
@@ -244,7 +254,7 @@ void print_image_vect(pixel * test)
   for (y=0; y < PICTURE_VERTICAL_SIZE; y++)
     {
       for (x=0; x < PICTURE_HORIZONTAL_SIZE; x++){
-	printf("0x%x",(unsigned char)test[PICTURE_HORIZONTAL_SIZE*y+x]);
+	printf("0x%02x",(unsigned char)test[PICTURE_HORIZONTAL_SIZE*y+x]);
 	if ( (y != PICTURE_VERTICAL_SIZE-1) | (x != PICTURE_HORIZONTAL_SIZE-1) )
 	  printf(",");
       }

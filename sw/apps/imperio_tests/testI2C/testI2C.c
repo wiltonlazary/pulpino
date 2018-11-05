@@ -1,4 +1,4 @@
-// Copyright 2015 ETH Zurich and University of Bologna.
+// Copyright 2017 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the “License”); you may not use this file except in
 // compliance with the License.  You may obtain a copy of the License at
@@ -7,6 +7,7 @@
 // this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+
 
 #include <i2c.h>
 #include <utils.h>
@@ -25,8 +26,7 @@ testcase_t testcases[] = {
 };
 
 int main() {
-  run_suite(testcases);
-  return 0;
+  return run_suite(testcases);
 }
 
 void check(testresult_t *result, void (*start)(), void (*stop)()) {
@@ -101,6 +101,9 @@ void check(testresult_t *result, void (*start)(), void (*stop)()) {
     result->errors++;
     return;
   }
+
+  i2c_send_command(I2C_STOP);      //do a stop bit, initiate eeprom write
+  while(i2c_busy());
 
 
   i2c_send_data(0xA1); // write to EEprom with A0,A1=1 1010 B0 A1 A0 R/Wn

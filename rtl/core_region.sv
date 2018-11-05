@@ -1,4 +1,4 @@
-// Copyright 2015 ETH Zurich and University of Bologna.
+// Copyright 2017 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the “License”); you may not use this file except in
 // compliance with the License.  You may obtain a copy of the License at
@@ -7,6 +7,7 @@
 // this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
 // CONDITIONS OF ANY KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations under the License.
+
 
 `include "axi_bus.sv"
 `include "config.sv"
@@ -19,7 +20,12 @@ module core_region
     parameter AXI_ID_SLAVE_WIDTH   = 10,
     parameter AXI_USER_WIDTH       = 0,
     parameter DATA_RAM_SIZE        = 32768, // in bytes
-    parameter INSTR_RAM_SIZE       = 32768  // in bytes
+    parameter INSTR_RAM_SIZE       = 32768, // in bytes
+    parameter USE_ZERO_RISCY       = 0,
+    parameter RISCY_RV32F          = 0,
+    parameter ZERO_RV32M           = 1,
+    parameter ZERO_RV32E           = 0
+
   )
 (
     // Clock and Reset
@@ -37,6 +43,7 @@ module core_region
     AXI_BUS.Master      dbg_master,
     AXI_BUS.Slave       data_slave,
     AXI_BUS.Slave       instr_slave,
+    DEBUG_BUS.Slave     debug,
 
     // JTAG signals
     input  logic        tck_i,
@@ -75,7 +82,6 @@ module core_region
   logic [3:0]   core_data_be;
   logic [31:0]  core_data_rdata;
   logic [31:0]  core_data_wdata;
-
 
   // signals to/from AXI mem
   logic                        is_axi_addr;
@@ -125,19 +131,6 @@ module core_region
   logic [31:0]  core_axi_rdata;
   logic [31:0]  core_axi_wdata;
 
-  // adv. dbg unit to core signals
-  logic [0:0]             dbginf_stall;
-  logic [0:0]             dbginf_bp;
-  logic [0:0]             dbginf_strobe;
-  logic [0:0]             dbginf_ack;
-  logic [0:0]             dbginf_rst;
-  logic [0:0]             dbginf_we;
-  logic [0:0] [15:0]      dbginf_addr;
-  logic [0:0] [31:0]      dbginf_datai;
-  logic [0:0] [31:0]      dbginf_datao;
-
-  logic         clk_core_int;
-
   AXI_BUS
   #(
     .AXI_ADDR_WIDTH   ( AXI_ADDR_WIDTH      ),
@@ -148,36 +141,94 @@ module core_region
   core_master_int();
 
   //----------------------------------------------------------------------------//
-  // Core clock gating
-  //----------------------------------------------------------------------------//
-  cluster_clock_gating core_clock_gate
-  (
-    .clk_o     ( clk_core_int   ),
-    .en_i      ( clock_gating_i ),
-    .test_en_i ( testmode_i     ),
-    .clk_i     ( clk            )
-  );
-
-
-  //----------------------------------------------------------------------------//
   // Core Instantiation
   //----------------------------------------------------------------------------//
 
-  `ifdef RISCV
+  logic [4:0] irq_id;
+  always_comb begin
+    irq_id = '0;
+    for (int i = 0; i < 32; i+=1) begin
+      if(irq_i[i]) begin
+        irq_id = i[4:0];
+      end
+    end
+  end
+
+  if(USE_ZERO_RISCY) begin: CORE
+      zeroriscy_core
+      #(
+        .N_EXT_PERF_COUNTERS (     0      ),
+        .RV32E               ( ZERO_RV32E ),
+        .RV32M               ( ZERO_RV32M )
+      )
+      RISCV_CORE
+      (
+        .clk_i           ( clk               ),
+        .rst_ni          ( rst_n             ),
+
+        .clock_en_i      ( clock_gating_i    ),
+        .test_en_i       ( testmode_i        ),
+
+        .boot_addr_i     ( boot_addr_i       ),
+        .core_id_i       ( 4'h0              ),
+        .cluster_id_i    ( 6'h0              ),
+
+        .instr_addr_o    ( core_instr_addr   ),
+        .instr_req_o     ( core_instr_req    ),
+        .instr_rdata_i   ( core_instr_rdata  ),
+        .instr_gnt_i     ( core_instr_gnt    ),
+        .instr_rvalid_i  ( core_instr_rvalid ),
+
+        .data_addr_o     ( core_lsu_addr     ),
+        .data_wdata_o    ( core_lsu_wdata    ),
+        .data_we_o       ( core_lsu_we       ),
+        .data_req_o      ( core_lsu_req      ),
+        .data_be_o       ( core_lsu_be       ),
+        .data_rdata_i    ( core_lsu_rdata    ),
+        .data_gnt_i      ( core_lsu_gnt      ),
+        .data_rvalid_i   ( core_lsu_rvalid   ),
+        .data_err_i      ( 1'b0              ),
+
+        .irq_i           ( (|irq_i)          ),
+        .irq_id_i        ( irq_id            ),
+        .irq_ack_o       (                   ),
+        .irq_id_o        (                   ),
+
+        .debug_req_i     ( debug.req         ),
+        .debug_gnt_o     ( debug.gnt         ),
+        .debug_rvalid_o  ( debug.rvalid      ),
+        .debug_addr_i    ( debug.addr        ),
+        .debug_we_i      ( debug.we          ),
+        .debug_wdata_i   ( debug.wdata       ),
+        .debug_rdata_o   ( debug.rdata       ),
+        .debug_halted_o  (                   ),
+        .debug_halt_i    ( 1'b0              ),
+        .debug_resume_i  ( 1'b0              ),
+
+        .fetch_enable_i  ( fetch_enable_i    ),
+        .core_busy_o     ( core_busy_o       ),
+        .ext_perf_counters_i (               )
+      );
+  end else begin: CORE
+
     riscv_core
     #(
-      .N_EXT_PERF_COUNTERS ( 0 )
+      .N_EXT_PERF_COUNTERS (     0       ),
+      .FPU                 ( RISCY_RV32F ),
+      .SHARED_FP           (     0       ),
+      .SHARED_FP_DIVSQRT   (     2       )
     )
     RISCV_CORE
     (
-      .clk             ( clk_core_int      ),
-      .rst_n           ( rst_n             ),
+      .clk_i           ( clk               ),
+      .rst_ni          ( rst_n             ),
 
+      .clock_en_i      ( clock_gating_i    ),
       .test_en_i       ( testmode_i        ),
 
       .boot_addr_i     ( boot_addr_i       ),
-      .core_id_i       ( 5'h0              ),
-      .cluster_id_i    ( 5'h0              ),
+      .core_id_i       ( 4'h0              ),
+      .cluster_id_i    ( 6'h0              ),
 
       .instr_addr_o    ( core_instr_addr   ),
       .instr_req_o     ( core_instr_req    ),
@@ -195,71 +246,45 @@ module core_region
       .data_rvalid_i   ( core_lsu_rvalid   ),
       .data_err_i      ( 1'b0              ),
 
-      .irq_i           ( irq_i             ),
-
-      .dbginf_stall_i  ( dbginf_stall[0]   ),
-      .dbginf_bp_o     ( dbginf_bp[0]      ),
-      .dbginf_strobe_i ( dbginf_strobe[0]  ),
-      .dbginf_ack_o    ( dbginf_ack[0]     ),
-      .dbginf_we_i     ( dbginf_we[0]      ),
-      .dbginf_addr_i   ( dbginf_addr[0]    ),
-      .dbginf_data_i   ( dbginf_datao[0]   ),
-      .dbginf_data_o   ( dbginf_datai[0]   ),
-
-      .fetch_enable_i  ( fetch_enable_i    ),
-      .core_busy_o     ( core_busy_o       ),
-
-      .ext_perf_counters_i (               )
-    );
-  `else
-    or10n_core
-    #(
-      .N_EXT_PERF_COUNTERS ( 0 )
-    )
-    OR10N_CORE
-    (
-      // Clock and Reset
-      .clk             ( clk_core_int      ),
-      .rst_n           ( rst_n             ),
-
-      .boot_addr_i     ( '0                ),
-      .core_id_i       ( 5'h0              ),
-      .cluster_id_i    ( 5'h0              ),
-
-      .instr_addr_o    ( core_instr_addr   ),
-      .instr_req_o     ( core_instr_req    ),
-      .instr_rdata_i   ( core_instr_rdata  ),
-      .instr_gnt_i     ( core_instr_gnt    ),
-      .instr_rvalid_i  ( core_instr_rvalid ),
-
-      .data_addr_o     ( core_lsu_addr     ),
-      .data_wdata_o    ( core_lsu_wdata    ),
-      .data_we_o       ( core_lsu_we       ),
-      .data_req_o      ( core_lsu_req      ),
-      .data_be_o       ( core_lsu_be       ),
-      .data_rdata_i    ( core_lsu_rdata    ),
-      .data_gnt_i      ( core_lsu_gnt      ),
-      .data_rvalid_i   ( core_lsu_rvalid   ),
-
       .irq_i           ( (|irq_i)          ),
-      .irq_nm_i        ( 1'b0              ),
+      .irq_id_i        ( irq_id            ),
+      .irq_ack_o       (                   ),
+      .irq_id_o        (                   ),
+      .irq_sec_i       ( 1'b0              ),
+      .sec_lvl_o       (                   ),
 
-      .dbginf_stall_i  ( dbginf_stall[0]   ),
-      .dbginf_bp_o     ( dbginf_bp[0]      ),
-      .dbginf_strobe_i ( dbginf_strobe[0]  ),
-      .dbginf_ack_o    ( dbginf_ack[0]     ),
-      .dbginf_we_i     ( dbginf_we[0]      ),
-      .dbginf_addr_i   ( dbginf_addr[0]    ),
-      .dbginf_data_i   ( dbginf_datao[0]   ),
-      .dbginf_data_o   ( dbginf_datai[0]   ),
+      .debug_req_i     ( debug.req         ),
+      .debug_gnt_o     ( debug.gnt         ),
+      .debug_rvalid_o  ( debug.rvalid      ),
+      .debug_addr_i    ( debug.addr        ),
+      .debug_we_i      ( debug.we          ),
+      .debug_wdata_i   ( debug.wdata       ),
+      .debug_rdata_o   ( debug.rdata       ),
+      .debug_halted_o  (                   ),
+      .debug_halt_i    ( 1'b0              ),
+      .debug_resume_i  ( 1'b0              ),
 
       .fetch_enable_i  ( fetch_enable_i    ),
       .core_busy_o     ( core_busy_o       ),
 
-      .ext_perf_counters_i (               )
-    );
-  `endif
+      // apu-interconnect
+      // handshake signals
+      .apu_master_req_o      (             ),
+      .apu_master_ready_o    (             ),
+      .apu_master_gnt_i      ( 1'b1        ),
+      // request channel
+      .apu_master_operands_o (             ),
+      .apu_master_op_o       (             ),
+      .apu_master_type_o     (             ),
+      .apu_master_flags_o    (             ),
+      // response channel
+      .apu_master_valid_i    ( '0          ),
+      .apu_master_result_i   ( '0          ),
+      .apu_master_flags_i    ( '0          ),
 
+      .ext_perf_counters_i (               )
+      );
+  end
 
   core2axi_wrap
   #(
@@ -267,7 +292,7 @@ module core_region
     .AXI_DATA_WIDTH   ( AXI_DATA_WIDTH      ),
     .AXI_ID_WIDTH     ( AXI_ID_MASTER_WIDTH ),
     .AXI_USER_WIDTH   ( AXI_USER_WIDTH      ),
-    .REGISTERED_GRANT ( `CORE2AXI_REG_GRANT )
+    .REGISTERED_GRANT ( "FALSE"             )
   )
   core2axi_i
   (
@@ -290,24 +315,24 @@ module core_region
   // AXI Slices
   //----------------------------------------------------------------------------//
 
-   axi_slice_wrap
-   #(
-     .AXI_ADDR_WIDTH ( AXI_ADDR_WIDTH       ),
-     .AXI_DATA_WIDTH ( AXI_DATA_WIDTH       ),
-     .AXI_USER_WIDTH ( AXI_USER_WIDTH       ),
-     .AXI_ID_WIDTH   ( AXI_ID_MASTER_WIDTH  ),
-     .SLICE_DEPTH    ( 2                    )
-   )
-   axi_slice_core2axi
-   (
-     .clk_i      ( clk             ),
-     .rst_ni     ( rst_n           ),
+  axi_slice_wrap
+  #(
+    .AXI_ADDR_WIDTH ( AXI_ADDR_WIDTH       ),
+    .AXI_DATA_WIDTH ( AXI_DATA_WIDTH       ),
+    .AXI_USER_WIDTH ( AXI_USER_WIDTH       ),
+    .AXI_ID_WIDTH   ( AXI_ID_MASTER_WIDTH  ),
+    .SLICE_DEPTH    ( 2                    )
+  )
+  axi_slice_core2axi
+  (
+    .clk_i      ( clk             ),
+    .rst_ni     ( rst_n           ),
 
-     .test_en_i  ( testmode_i      ),
+    .test_en_i  ( testmode_i      ),
 
-     .axi_slave  ( core_master_int ),
-     .axi_master ( core_master     )
-   );
+    .axi_slave  ( core_master_int ),
+    .axi_master ( core_master     )
+  );
 
 
   //----------------------------------------------------------------------------//
@@ -534,6 +559,7 @@ module core_region
   // Advanced Debug Unit
   //----------------------------------------------------------------------------//
 
+  // TODO: remove the debug connections to the core
   adv_dbg_if
   #(
     .NB_CORES           ( 1                   ),
@@ -552,15 +578,15 @@ module core_region
 
     .test_mode_i ( testmode_i      ),
 
-    .cpu_addr_o  ( dbginf_addr     ),
-    .cpu_data_i  ( dbginf_datai    ),
-    .cpu_data_o  ( dbginf_datao    ),
-    .cpu_bp_i    ( dbginf_bp       ),
-    .cpu_stall_o ( dbginf_stall    ),
-    .cpu_stb_o   ( dbginf_strobe   ),
-    .cpu_we_o    ( dbginf_we       ),
-    .cpu_ack_i   ( dbginf_ack      ),
-    .cpu_rst_o   ( dbginf_rst      ),
+    .cpu_addr_o  (                 ),
+    .cpu_data_i  ( '0              ),
+    .cpu_data_o  (                 ),
+    .cpu_bp_i    ( '0              ),
+    .cpu_stall_o (                 ),
+    .cpu_stb_o   (                 ),
+    .cpu_we_o    (                 ),
+    .cpu_ack_i   ( '1              ),
+    .cpu_rst_o   (                 ),
 
     .axi_aclk             ( clk                  ),
     .axi_aresetn          ( rst_n                ),
@@ -626,11 +652,11 @@ module core_region
   (
     .clk           ( clk                     ),
 
-    .core_req_i    ( RISCV_CORE.data_req_o   ),
-    .core_addr_i   ( RISCV_CORE.data_addr_o  ),
-    .core_we_i     ( RISCV_CORE.data_we_o    ),
-    .core_be_i     ( RISCV_CORE.data_be_o    ),
-    .core_wdata_i  ( RISCV_CORE.data_wdata_o ),
+    .core_req_i    ( CORE.RISCV_CORE.data_req_o   ),
+    .core_addr_i   ( CORE.RISCV_CORE.data_addr_o  ),
+    .core_we_i     ( CORE.RISCV_CORE.data_we_o    ),
+    .core_be_i     ( CORE.RISCV_CORE.data_be_o    ),
+    .core_wdata_i  ( CORE.RISCV_CORE.data_wdata_o ),
     .core_gnt_o    (                         ),
     .core_rdata_o  (                         ),
     .core_rvalid_o (                         ),
@@ -646,9 +672,9 @@ module core_region
   );
 
   initial begin
-    force RISCV_CORE.data_gnt_i    = data_stalls_i.core_gnt_o;
-    force RISCV_CORE.data_rvalid_i = data_stalls_i.core_rvalid_o;
-    force RISCV_CORE.data_rdata_i  = data_stalls_i.core_rdata_o;
+    force CORE.RISCV_CORE.data_gnt_i    = data_stalls_i.core_gnt_o;
+    force CORE.RISCV_CORE.data_rvalid_i = data_stalls_i.core_rvalid_o;
+    force CORE.RISCV_CORE.data_rdata_i  = data_stalls_i.core_rdata_o;
 
     force core_lsu_req   = data_stalls_i.data_req_o;
     force core_lsu_addr  = data_stalls_i.data_addr_o;
@@ -665,8 +691,8 @@ module core_region
   (
     .clk           ( clk                     ),
 
-    .core_req_i    ( RISCV_CORE.instr_req_o  ),
-    .core_addr_i   ( RISCV_CORE.instr_addr_o ),
+    .core_req_i    ( CORE.RISCV_CORE.instr_req_o  ),
+    .core_addr_i   ( CORE.RISCV_CORE.instr_addr_o ),
     .core_we_i     (                         ),
     .core_be_i     (                         ),
     .core_wdata_i  (                         ),
@@ -685,9 +711,9 @@ module core_region
   );
 
   initial begin
-    force RISCV_CORE.instr_gnt_i    = instr_stalls_i.core_gnt_o;
-    force RISCV_CORE.instr_rvalid_i = instr_stalls_i.core_rvalid_o;
-    force RISCV_CORE.instr_rdata_i  = instr_stalls_i.core_rdata_o;
+    force CORE.RISCV_CORE.instr_gnt_i    = instr_stalls_i.core_gnt_o;
+    force CORE.RISCV_CORE.instr_rvalid_i = instr_stalls_i.core_rvalid_o;
+    force CORE.RISCV_CORE.instr_rdata_i  = instr_stalls_i.core_rdata_o;
 
     force core_instr_req   = instr_stalls_i.data_req_o;
     force core_instr_addr  = instr_stalls_i.data_addr_o;

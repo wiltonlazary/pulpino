@@ -1,14 +1,17 @@
 \chapter{CPU Core}
 
-\pulpino supports both the OpenRISC \orion core and the \riscv \rvcore. The two
+\pulpino supports both the \riscv \rvcore and the \riscv \zerocore. The two
 cores have the same external interfaces and are thus plug-compatible.
+Figure \ref{fig:riscy_core} and \ref{fig:zero_core} show the two cores
+architectures.
 
 The core use a very simple data and instruction interface to talk to data and
 instruction memories. To interface with AXI, a core2axi protocol converter is
 instantiated in \pulpino.
 
-The core is connected via a debug interface to the advanced debug unit which
-allows in-circuit debugging.
+For debugging purposes, all core registers have been memory mapped which allows
+to them to be accessed over the AXI bus. The debug unit inside the core handles
+the request over this bus and reads/sets the core registers and/or halts the core.
 
 The core supports performance counters. Those are mainly used for counting core
 internal events like stalls, but it is possible to count core-external events
@@ -19,11 +22,14 @@ port.
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=\textwidth]{./figures/riscv_overview}
-  \caption{RISC-V core overview}
-  \label{fig1}
+  \includegraphics[width=\textwidth]{./figures/riscy_archi.png}
+  \caption{RISCY core overview}
+  \label{fig:riscy_core}
 \end{figure}
 
-
-Additional information is available in the core datasheet, see
-\textit{ips/riscv/docs/datasheet}.
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{./figures/zeroriscy_archi.png}
+  \caption{zero-riscy core overview}
+  \label{fig:zero_core}
+\end{figure}

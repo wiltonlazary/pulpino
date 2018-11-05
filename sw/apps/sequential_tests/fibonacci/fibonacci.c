@@ -1,3 +1,13 @@
+// Copyright 2017 ETH Zurich and University of Bologna.
+// Copyright and related rights are licensed under the Solderpad Hardware
+// License, Version 0.51 (the “License”); you may not use this file except in
+// compliance with the License.  You may obtain a copy of the License at
+// http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
+// or agreed to in writing, software, hardware and materials distributed under
+// this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
 #include "bench.h"
 #include "utils.h"
 #include "string_lib.h"
@@ -8,22 +18,17 @@
 
 #define N 10
 const int RESULT_FIB[N] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34};
-//#define N 20
-//const int RESULT_FIB[N] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181};
-//#define N 25
-//const int RESULT_FIB[N] = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368};
 
 void check(testresult_t *result, void (*start)(), void (*stop)());
 
 testcase_t testcases[] = {
-  { .name = "fibonacci",   .test = check       },
+  { .name = "fibonacci",   .test = check },
   {0, 0}
 };
 
 int main()
 {
-  run_suite(testcases);
-  return 0;
+  return run_suite(testcases);
 }
 
 int recFib(int);
@@ -35,9 +40,9 @@ void check(testresult_t *result, void (*start)(), void (*stop)()) {
   int n=N;
   printf("Start fibonacci\n");
 
-  for (j=0; j<2; j++) {
+  start();
     fib(array, n);
-  }
+  stop();
 
   for (i=0;i<n;i++) {
     if (RESULT_FIB[i] != array[i]) {

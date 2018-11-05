@@ -1,3 +1,13 @@
+// Copyright 2017 ETH Zurich and University of Bologna.
+// Copyright and related rights are licensed under the Solderpad Hardware
+// License, Version 0.51 (the “License”); you may not use this file except in
+// compliance with the License.  You may obtain a copy of the License at
+// http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
+// or agreed to in writing, software, hardware and materials distributed under
+// this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
 module pulpemu_top(
   DDR_addr,
   DDR_ba,
@@ -28,7 +38,12 @@ module pulpemu_top(
   oled_dc_o,
   oled_res_o,
   oled_vbat_o,
-  oled_vdd_o
+  oled_vdd_o,
+  ext_tck_i,
+  ext_trstn_i,
+  ext_tdi_i,
+  ext_tms_i,
+  ext_tdo_o
   );
 
   inout  [14:0] DDR_addr;
@@ -63,6 +78,12 @@ module pulpemu_top(
   output        oled_vbat_o;
   output        oled_vdd_o;
 
+  input         ext_tck_i;
+  input         ext_trstn_i;
+  input         ext_tdi_i;
+  input         ext_tms_i;
+  output        ext_tdo_o;
+
 
   wire [14:0] DDR_addr;
   wire [2:0]  DDR_ba;
@@ -86,8 +107,6 @@ module pulpemu_top(
   wire        FIXED_IO_ps_porb;
   wire        FIXED_IO_ps_srstb;
 
-  wire [31:0] end_of_operation;
-  wire [31:0] fetch_enable;
   wire        ps7_clk;
   wire        ps7_rst_n;
   wire        ps7_rst_clking_n;
@@ -95,6 +114,8 @@ module pulpemu_top(
   wire        ref_clk_i;               // input
   wire        rst_ni;                  // input
   wire        fetch_en;                // input
+
+  wire [31:0] fetch_enable;
 
   wire [31:0] jtag_emu_i; // input to PS
   wire [31:0] jtag_emu_o; // output from PS
@@ -163,17 +184,6 @@ module pulpemu_top(
 
   assign fetch_en = fetch_en_r;
 
-  reg [31:0] end_of_operation_r;
-  always @(posedge ps7_clk or negedge ps7_rst_n)
-  begin
-    if(ps7_rst_n == 1'b0)
-      end_of_operation_r = 32'b0;
-    else begin
-      end_of_operation_r = gpio_out;
-    end
-  end
-  assign end_of_operation = end_of_operation_r;
-
   always @(posedge ps7_clk or negedge ps7_rst_n)
   begin
     if(ps7_rst_n == 1'b0)
@@ -183,13 +193,22 @@ module pulpemu_top(
   end
 
   // JTAG signals
-  assign tck_i            = jtag_emu_o[0];
-  assign trst_ni          = jtag_emu_o[1];
-  assign td_i             = jtag_emu_o[2];
-  assign tms_i            = jtag_emu_o[3];
+  // for JTAG EMU
+  // assign tck_i            = jtag_emu_o[0];
+  // assign trst_ni          = jtag_emu_o[1];
+  // assign td_i             = jtag_emu_o[2];
+  // assign tms_i            = jtag_emu_o[3];
   assign jtag_emu_i[3:0]  = 4'b0;
   assign jtag_emu_i[4]    = td_o;
   assign jtag_emu_i[31:5] = 27'b0;
+
+  // for external JTAG
+  assign tck_i   = ext_tck_i;
+  assign trst_ni = ext_trstn_i;
+  assign td_i    = ext_tdi_i;
+  assign tms_i   = ext_tms_i;
+
+  assign ext_tdo_o = td_o;
 
 
   // GPIO signals
@@ -266,7 +285,6 @@ module pulpemu_top(
     .clking_axi_rvalid  ( clking_axi_rvalid  ),
     .clking_axi_rready  ( clking_axi_rready  ),
 
-    .end_of_operation   ( end_of_operation   ),
     .fetch_enable       ( fetch_enable       ),
     .ps7_clk            ( ps7_clk            ),
     .ps7_rst_n          ( ps7_rst_n          ),
@@ -318,7 +336,7 @@ module pulpemu_top(
 );
 
   // PULPino SoC
-  pulpino pulpino_wrap_i (
+  pulpino  pulpino_wrap_i (
     .clk               ( s_clk_pulpino  ),
     .rst_n             ( s_rstn_pulpino ),
 

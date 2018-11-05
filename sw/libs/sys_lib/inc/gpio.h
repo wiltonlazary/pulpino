@@ -1,7 +1,7 @@
-// Copyright 2016 ETH Zurich and University of Bologna.
+// Copyright 2017 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the “License”); you may not use this file except in
-// compliance with the License. You may obtain a copy of the License at
+// compliance with the License.  You may obtain a copy of the License at
 // http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
 // or agreed to in writing, software, hardware and materials distributed under
 // this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
@@ -39,6 +39,28 @@
 #define GPIO_REG_PADCFG7              ( GPIO_BASE_ADDR + 0x3C )
 
 #define SOC_CTRL_PADFUN               ( SOC_CTRL_BASE_ADDR + 0x00 )
+
+
+
+#define PADDIR 				REGP(GPIO_REG_PADDIR)
+#define PADIN 				REGP(GPIO_REG_PADIN)
+#define PADOUT 				REGP(GPIO_REG_PADOUT)
+#define INTEN 				REGP(GPIO_REG_INTEN)
+#define INTTYPE0 			REGP(GPIO_REG_INTTYPE0)
+#define INTTYPE1 			REGP(GPIO_REG_INTTYPE1)
+#define INTSTATUS 			REGP(GPIO_REG_INTSTATUS)
+
+#define PADCFG0 			REGP(GPIO_REG_PADCFG0)
+#define PADCFG1 			REGP(GPIO_REG_PADCFG1)
+#define PADCFG2 			REGP(GPIO_REG_PADCFG2)
+#define PADCFG3 			REGP(GPIO_REG_PADCFG3)
+#define PADCFG4 			REGP(GPIO_REG_PADCFG4)
+#define PADCFG5 			REGP(GPIO_REG_PADCFG5)
+#define PADCFG6 			REGP(GPIO_REG_PADCFG6)
+#define PADCFG7 			REGP(GPIO_REG_PADCFG7)
+
+#define PADFUN 				REGP(SOC_CTRL_PADFUN)
+
 
 #define FUNC_GPIO 1
 

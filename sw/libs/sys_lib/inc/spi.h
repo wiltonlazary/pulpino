@@ -1,7 +1,7 @@
-// Copyright 2016 ETH Zurich and University of Bologna.
+// Copyright 2017 ETH Zurich and University of Bologna.
 // Copyright and related rights are licensed under the Solderpad Hardware
 // License, Version 0.51 (the “License”); you may not use this file except in
-// compliance with the License. You may obtain a copy of the License at
+// compliance with the License.  You may obtain a copy of the License at
 // http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
 // or agreed to in writing, software, hardware and materials distributed under
 // this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
@@ -45,6 +45,17 @@
 #define SPI_REG_RXFIFO                ( SPI_BASE_ADDR + 0x20 )
 #define SPI_REG_INTCFG                ( SPI_BASE_ADDR + 0x24 )
 #define SPI_REG_INTSTA                ( SPI_BASE_ADDR + 0x28 )
+
+#define SPI_STATUS			REG(SPI_REG_STATUS)              
+#define SPI_CLKDIV 			REG(SPI_REG_CLKDIV)              
+#define SPI_SPICMD 			REG(SPI_REG_SPICMD)              
+#define SPI_SPIADR			REG(SPI_REG_SPIADR)               
+#define SPI_SPILEN			REG(SPI_REG_SPILEN)               
+#define SPI_SPIDUM                	REG(SPI_REG_SPIDUM)	
+#define SPI_TXFIFO			REG(SPI_REG_TXFIFO)          
+#define SPI_RXFIFO			REG(SPI_REG_RXFIFO)           
+#define SPI_INTCFG   			REG(SPI_REG_INTCFG)            
+#define SPI_INTSTA			REG(SPI_REG_INTSTA)       
 
 #define PIN_SSPI_SIO0 4
 #define PIN_SSPI_SIO1 5

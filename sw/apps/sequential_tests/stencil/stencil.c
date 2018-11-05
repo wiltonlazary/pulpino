@@ -1,3 +1,13 @@
+// Copyright 2017 ETH Zurich and University of Bologna.
+// Copyright and related rights are licensed under the Solderpad Hardware
+// License, Version 0.51 (the “License”); you may not use this file except in
+// compliance with the License.  You may obtain a copy of the License at
+// http://solderpad.org/licenses/SHL-0.51. Unless required by applicable law
+// or agreed to in writing, software, hardware and materials distributed under
+// this License is distributed on an “AS IS” BASIS, WITHOUT WARRANTIES OR
+// CONDITIONS OF ANY KIND, either express or implied. See the License for the
+// specific language governing permissions and limitations under the License.
+
 #include "utils.h"
 #include "string_lib.h"
 #include "bench.h"
@@ -15,13 +25,25 @@ __attribute__ ((section(".heapsram"))) int W[N];
 __attribute__ ((section(".heapsram"))) int neighbors[4];
 __attribute__ ((section(".heapsram"))) int weights[4];
 
+void check(testresult_t *result, void (*start)(), void (*stop)());
 
+testcase_t testcases[] = {
+  { .name = "stencil",   .test = check       },
+  {0, 0}
+};
 
 int main()
 {
+  int error = 0;
+  if(get_core_id()==0){
+    error = run_suite(testcases);
+  }
+  return error;
+}
+
+void check(testresult_t *result, void (*start)(), void (*stop)()) {
   int i,j,k;
   int error = 0;
-
 
   printf("Start stencil\n");
 
@@ -31,26 +53,19 @@ int main()
       W[i] = i+2;
   }
 
-  for (j = 0; j<2; j++) {
-
-    stencil(A, h_R, W);
-  }
+  start();
+  stencil(A, h_R, W);
+  stop();
 
   for (i=0;i<N;i++) {
     for (k=0;k<M;k++) {
       if (RESULT_STENCIL[i*M+k] != h_R[i*M+k]) {
-        error = error + 1;
+        result->errors++;
         printf("Error occurred at i=%d k=%d; Computed result R=%d does not match expected Result=%d\n",i,k,h_R[i*M+k],RESULT_STENCIL[i*M+k]);
       }
     }
   }
-
-  print_summary(error);
-
-  return 0;
 }
-
-
 void stencil(int* A, int* h_R, int* W)
 {
 

@@ -90,7 +90,7 @@
  * causing the 31 (32 register + mepc - x0 - x2) registers to be on the stack twice.
  *
  * Then we load the stack pointer of the current task and push all registers to the stack.
- * The last thing we do is to adjust the stack poitner (sp) to accomodate for the memory
+ * The last thing we do is to adjust the stack poitner (sp) to accommodate for the memory
  * we used.
  *
  * The interrupts will have been disabled during the call to portSAVE_CONTEXT()
@@ -100,38 +100,38 @@
 #define portSAVE_CONTEXT()                                            \
      int_disable();                                                   \
      asm volatile ( "addi sp,   sp, -0x6c                       \n\t" \
-                    "sw   x1,   0x04(sp)						\n\t" \
-                    "sw   x3,   0x08(sp)						\n\t" \
-                    "sw   x4,   0x0c(sp)						\n\t" \
-                    "sw   x5,   0x10(sp)						\n\t" \
-                    "sw   x6,   0x14(sp)						\n\t" \
-                    "sw   x7,   0x18(sp)						\n\t" \
-                    "sw   x8,   0x1C(sp)						\n\t" \
-                    "sw   x9,   0x20(sp)						\n\t" \
-                    "sw   x10,  0x24(sp)						\n\t" \
-                    "sw   x11,  0x28(sp)						\n\t" \
-                    "sw   x12,  0x2c(sp)						\n\t" \
-                    "sw   x13,  0x30(sp)						\n\t" \
-                    "sw   x14,  0x34(sp)						\n\t" \
-                    "sw   x15,  0x38(sp)						\n\t" \
-                    "sw   x16,  0x3C(sp)						\n\t" \
-                    "sw   x17,  0x40(sp)						\n\t" \
-                    "sw   x18,  0x44(sp)						\n\t" \
-                    "sw   x19,  0x48(sp)						\n\t" \
-                    "sw   x20,  0x4C(sp)						\n\t" \
-                    "sw   x21,  0x50(sp)						\n\t" \
-                    "sw   x22,  0x54(sp)						\n\t" \
-                    "sw   x23,  0x58(sp)						\n\t" \
-                    "sw   x24,  0x5c(sp)						\n\t" \
-                    "sw   x25,  0x60(sp)						\n\t" \
-                    "sw   x26,  0x64(sp)						\n\t" \
-                    "sw   x27,  0x68(sp)						\n\t" \
-                    "sw   x28,  0x6c(sp)						\n\t" \
-                    "sw   x29,  0x70(sp)						\n\t" \
-                    "sw   x30,  0x74(sp)						\n\t" \
-                    "sw   x31,  0x78(sp)						\n\t" \
-                    "csrr t0,   mepc							\n\t" \
-                    "sw   t0,   0x00(sp)						\n\t" \
+                    "sw   x1,   0x04(sp)                        \n\t" \
+                    "sw   x3,   0x08(sp)                        \n\t" \
+                    "sw   x4,   0x0c(sp)                        \n\t" \
+                    "sw   x5,   0x10(sp)                        \n\t" \
+                    "sw   x6,   0x14(sp)                        \n\t" \
+                    "sw   x7,   0x18(sp)                        \n\t" \
+                    "sw   x8,   0x1C(sp)                        \n\t" \
+                    "sw   x9,   0x20(sp)                        \n\t" \
+                    "sw   x10,  0x24(sp)                        \n\t" \
+                    "sw   x11,  0x28(sp)                        \n\t" \
+                    "sw   x12,  0x2c(sp)                        \n\t" \
+                    "sw   x13,  0x30(sp)                        \n\t" \
+                    "sw   x14,  0x34(sp)                        \n\t" \
+                    "sw   x15,  0x38(sp)                        \n\t" \
+                    "sw   x16,  0x3C(sp)                        \n\t" \
+                    "sw   x17,  0x40(sp)                        \n\t" \
+                    "sw   x18,  0x44(sp)                        \n\t" \
+                    "sw   x19,  0x48(sp)                        \n\t" \
+                    "sw   x20,  0x4C(sp)                        \n\t" \
+                    "sw   x21,  0x50(sp)                        \n\t" \
+                    "sw   x22,  0x54(sp)                        \n\t" \
+                    "sw   x23,  0x58(sp)                        \n\t" \
+                    "sw   x24,  0x5c(sp)                        \n\t" \
+                    "sw   x25,  0x60(sp)                        \n\t" \
+                    "sw   x26,  0x64(sp)                        \n\t" \
+                    "sw   x27,  0x68(sp)                        \n\t" \
+                    "sw   x28,  0x6c(sp)                        \n\t" \
+                    "sw   x29,  0x70(sp)                        \n\t" \
+                    "sw   x30,  0x74(sp)                        \n\t" \
+                    "sw   x31,  0x78(sp)                        \n\t" \
+                    "csrr t0,   mepc                            \n\t" \
+                    "sw   t0,   0x00(sp)                        \n\t" \
                     "lw   t0,   pxCurrentTCB                    \n\t" \
                     "sw   sp,   (t0)                            \n\t" \
                 );                                                    \
@@ -142,43 +142,42 @@
  * the context save so we can write to the stack pointer.
  */
 #define portRESTORE_CONTEXT()                                         \
-    asm volatile (  "lw   sp,   pxCurrentTCB					\n\t" \
-                    "lw	  sp, 	(sp)	 						\n\t" \
-                    "lw   t0,   0x00(sp)						\n\t" \
-                    "csrw mepc, t0								\n\t" \
-                    "lw   x1,   0x04(sp)						\n\t" \
-                    "lw   x3,   0x08(sp)						\n\t" \
-                    "lw   x4,   0x0c(sp)						\n\t" \
-                    "lw   x5,   0x10(sp)						\n\t" \
-                    "lw   x6,   0x14(sp)						\n\t" \
-                    "lw   x7,   0x18(sp)						\n\t" \
-                    "lw   x8,   0x1c(sp)						\n\t" \
-                    "lw   x9,   0x20(sp)						\n\t" \
-                    "lw   x10,  0x24(sp)						\n\t" \
-                    "lw   x11,  0x28(sp)						\n\t" \
-                    "lw   x12,  0x2c(sp)						\n\t" \
-                    "lw   x13,  0x30(sp)						\n\t" \
-                    "lw   x14,  0x34(sp)						\n\t" \
-                    "lw   x15,  0x38(sp)						\n\t" \
-                    "lw   x16,  0x3c(sp)						\n\t" \
-                    "lw   x17,  0x40(sp)						\n\t" \
-                    "lw   x18,  0x44(sp)						\n\t" \
-                    "lw   x19,  0x48(sp)						\n\t" \
-                    "lw   x20,  0x4C(sp)						\n\t" \
-                    "lw   x21,  0x50(sp)						\n\t" \
-                    "lw   x22,  0x54(sp)						\n\t" \
-                    "lw   x23,  0x58(sp)						\n\t" \
-                    "lw   x24,  0x5C(sp)						\n\t" \
-                    "lw   x25,  0x60(sp)						\n\t" \
-                    "lw   x26,  0x64(sp)						\n\t" \
-                    "lw   x27,  0x68(sp)						\n\t" \
-                    "lw   x28,  0x6C(sp)						\n\t" \
-                    "lw   x29,  0x70(sp)						\n\t" \
-                    "lw   x30,  0x74(sp)						\n\t" \
-                    "lw   x31,  0x78(sp)						\n\t" \
+    asm volatile (  "lw   sp,   pxCurrentTCB                    \n\t" \
+                    "lw   sp,   (sp)                            \n\t" \
+                    "lw   t0,   0x00(sp)                        \n\t" \
+                    "csrw mepc, t0                              \n\t" \
+                    "lw   x1,   0x04(sp)                        \n\t" \
+                    "lw   x3,   0x08(sp)                        \n\t" \
+                    "lw   x4,   0x0c(sp)                        \n\t" \
+                    "lw   x5,   0x10(sp)                        \n\t" \
+                    "lw   x6,   0x14(sp)                        \n\t" \
+                    "lw   x7,   0x18(sp)                        \n\t" \
+                    "lw   x8,   0x1c(sp)                        \n\t" \
+                    "lw   x9,   0x20(sp)                        \n\t" \
+                    "lw   x10,  0x24(sp)                        \n\t" \
+                    "lw   x11,  0x28(sp)                        \n\t" \
+                    "lw   x12,  0x2c(sp)                        \n\t" \
+                    "lw   x13,  0x30(sp)                        \n\t" \
+                    "lw   x14,  0x34(sp)                        \n\t" \
+                    "lw   x15,  0x38(sp)                        \n\t" \
+                    "lw   x16,  0x3c(sp)                        \n\t" \
+                    "lw   x17,  0x40(sp)                        \n\t" \
+                    "lw   x18,  0x44(sp)                        \n\t" \
+                    "lw   x19,  0x48(sp)                        \n\t" \
+                    "lw   x20,  0x4C(sp)                        \n\t" \
+                    "lw   x21,  0x50(sp)                        \n\t" \
+                    "lw   x22,  0x54(sp)                        \n\t" \
+                    "lw   x23,  0x58(sp)                        \n\t" \
+                    "lw   x24,  0x5C(sp)                        \n\t" \
+                    "lw   x25,  0x60(sp)                        \n\t" \
+                    "lw   x26,  0x64(sp)                        \n\t" \
+                    "lw   x27,  0x68(sp)                        \n\t" \
+                    "lw   x28,  0x6C(sp)                        \n\t" \
+                    "lw   x29,  0x70(sp)                        \n\t" \
+                    "lw   x30,  0x74(sp)                        \n\t" \
+                    "lw   x31,  0x78(sp)                        \n\t" \
                     "addi sp,   sp,             0x7c            \n\t" \
                 );                                                    \
-                int_enable();                                         \
 
 /*-----------------------------------------------------------*/
 
@@ -195,7 +194,7 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
 {
     int usAddress = ( int ) pxCode;
 
-    /* End of stack marker. Usefull for debugging - unncecessary for deployment */
+    /* End of stack marker. Useful for debugging - unncecessary for deployment */
     *pxTopOfStack = ( StackType_t ) 0xdeadbeef;
     pxTopOfStack--;
 
@@ -220,8 +219,8 @@ StackType_t *pxPortInitialiseStack( StackType_t *pxTopOfStack, TaskFunction_t px
 BaseType_t xPortStartScheduler( void )
 {
     // Configure ISRs
-    int_init();
-    int_add(TIMER_A_OUTPUT_CMP, (void *) int_time_cmp, 0);
+    //int_init();
+    //int_add(TIMER_A_OUTPUT_CMP, (void *) int_time_cmp, 0);
 
     // enable timer interrupt
     IER = 0xF0000000;
@@ -231,7 +230,7 @@ BaseType_t xPortStartScheduler( void )
 
     /* Restore the context of the first task that is going to run. */
     portRESTORE_CONTEXT();
-
+    int_enable();
     /* Simulate a function call end as generated by the compiler.  We will now
     jump to the start of the task the context of which we have just restored. */
     asm volatile ( "ret" );
@@ -256,6 +255,7 @@ void vPortYield( void )
     portSAVE_CONTEXT();
     vTaskSwitchContext();
     portRESTORE_CONTEXT();
+    int_enable();
     /* called in a non interrupt context only - this function
      accounts for manual context switches */
     // asm volatile ("addi sp,   sp, 0x10                       \n\t");
@@ -271,7 +271,7 @@ void vPortYield( void )
  * vPortYield() from the call to vTaskSwitchContext() onwards.  The only
  * difference from vPortYield() is the tick count is incremented as the
  * call comes from the tick ISR - this function is called inside a ISR only
- * and needs to return with the ERET instruction.
+ * and needs to return with the MRET instruction.
  */
 void vPortYieldFromTick( void );
 void vPortYieldFromTick( void )
@@ -291,12 +291,12 @@ void vPortYieldFromTick( void )
     // another interrupt if we didn't wait long enough.
     for (int i = 0; i < 6; i++)
         asm volatile ("nop");
-
+    int_enable();
     /* we do need this since the return from interrupt is not handled
        in the crt0 runtime - because the call to the timer ISR is naked */
     /* return address is restored from stack to the empc register */
     // asm volatile ("addi sp,   sp, 0x10                       \n\t");
-    asm volatile ( "eret" );
+    asm volatile ( "mret" );
 }
 /*-----------------------------------------------------------*/
 
@@ -323,7 +323,8 @@ static void prvSetupTimerInterrupt( void )
  * the context is saved at the start of vPortYieldFromTick().  The tick
  * count is incremented after the context is saved.
  */
-void int_time_cmp(void)
+
+void ISR_TA_CMP(void)
 {
     /* interrupts are disabled until eret */
     vPortYieldFromTick();
@@ -335,7 +336,8 @@ void int_time_cmp(void)
  * tick count.  We don't need to switch context, this can only be done by
  * manual calls to taskYIELD();
  */
-void int_time_cmp(void)
+
+void ISR_TA_CMP(void)
 {
     int mcause;
     csrr(mcause, mcause);
@@ -344,7 +346,7 @@ void int_time_cmp(void)
     xTaskIncrementTick();
 
     /* return address is restored from stack to the empc register */
-    asm volatile ( "eret" );
+    asm volatile ( "mret" );
 }
 #endif
 
